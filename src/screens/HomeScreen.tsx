@@ -105,6 +105,7 @@ export default function HomeScreen() {
                 onPress={() =>
                   Linking.openURL(rec.project.url).catch(() => undefined)
                 }
+                hitSlop={8}
                 style={styles.action}>
                 <Text style={styles.actionPrimary}>Open</Text>
               </Pressable>
@@ -118,6 +119,7 @@ export default function HomeScreen() {
                       : [...prev, rec.project.slug],
                   )
                 }
+                hitSlop={8}
                 style={styles.action}>
                 <Text style={styles.actionText}>Not for me</Text>
               </Pressable>

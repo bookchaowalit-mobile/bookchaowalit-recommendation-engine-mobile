@@ -32,11 +32,20 @@ export type Recommendation = {
   reasons: string[];
 };
 
+/**
+ * Lower-case word tokens with Latin accents and full-width letters folded
+ * ("Café" → "cafe", "ｃｏｌｏｒ" → "color"). Splitting on everything outside
+ * a–z used to cut "café" to "caf" and drop non-Latin words entirely.
+ * Single-character tokens are ignored, except non-Latin ones (a single
+ * CJK character is a meaningful word).
+ */
 export function tokens(text: string): string[] {
   return text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]+/g, '')
     .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter(token => token.length > 1);
+    .split(/[^\p{L}\p{M}\p{N}]+/u)
+    .filter(token => token.length > 1 || /[^ -~]/.test(token));
 }
 
 export type RankOptions = {

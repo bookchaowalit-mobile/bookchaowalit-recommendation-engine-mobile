@@ -48,3 +48,11 @@ Score: 6/10 (was 5/10) — dismissals persist; native projects still not generat
 - Accessibility: Open / Not-for-me buttons name the project; `Linking.openURL` failures are caught.
 - Advisories: no same-major fixes available (image-size via metro etc.); needs the RN upgrade (P2).
 - Verified: lint, typecheck, jest, `npm run bundle:android`.
+
+## Done in this pass (pass 3)
+
+Score: 7.5/10 (was 7/10) — edge-case hunt in `src/lib/rank.ts`.
+
+- Bug: `tokens` split on everything outside `a-z0-9`, so "Café" became "caf", full-width "ｒｅｇｅｘ" matched nothing and non-Latin keywords were dropped. Tokens now fold Latin accents and full-width letters and keep Unicode letters (a single CJK character counts as a word).
+- a11y: "Open" / "Not for me" actions get `hitSlop` (visible target was ~30 px tall).
+- Verified: lint, typecheck, 20 Jest tests, `react-native bundle` for Android.

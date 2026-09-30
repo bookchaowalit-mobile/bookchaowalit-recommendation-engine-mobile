@@ -90,3 +90,15 @@ describe('catalog', () => {
     expect(projectHost('not a url')).toBe('not a url');
   });
 });
+
+describe('pass 3 edge cases', () => {
+  it('folds accents and full-width letters instead of truncating words', () => {
+    expect(tokens('Café Colour')).toEqual(['cafe', 'colour']);
+    expect(tokens('\uFF43\uFF4F\uFF4C\uFF4F\uFF52')).toEqual(['color']);
+    expect(tokens('a b 字')).toEqual(['字']);
+  });
+  it('a full-width keyword still matches the catalog', () => {
+    const recs = rank('learn', {query: '\uFF52\uFF45\uFF47\uFF45\uFF58', limit: 50});
+    expect(recs.some(r => r.project.slug === 'regex' && r.reasons.some(x => x.includes('regex')))).toBe(true);
+  });
+});
