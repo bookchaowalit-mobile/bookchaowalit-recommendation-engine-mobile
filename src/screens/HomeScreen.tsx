@@ -1,4 +1,6 @@
 import React, {useMemo, useState} from 'react';
+import {isStringArray, valueCodec} from '../lib/persist';
+import {usePersistentState} from '../usePersistentState';
 import {
   Linking,
   Pressable,
@@ -11,11 +13,18 @@ import {
 import {projectHost} from '../lib/catalog';
 import {INTENTS, rank, type Intent} from '../lib/rank';
 
+const slugsCodec = valueCodec(isStringArray);
+
 /** Ranking desk: pick an intent, add keywords, see every score explained. */
 export default function HomeScreen() {
   const [intent, setIntent] = useState<Intent>('make');
   const [query, setQuery] = useState('');
-  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
+  const [dismissedSlugs, setDismissedSlugs] = usePersistentState<string[]>(
+    'recommendations.dismissed.v1',
+    [],
+    slugsCodec,
+  );
+  const dismissed = useMemo(() => new Set(dismissedSlugs), [dismissedSlugs]);
 
   const results = useMemo(
     () => rank(intent, {query, exclude: dismissed}),
@@ -35,7 +44,10 @@ export default function HomeScreen() {
             accessibilityRole="tab"
             accessibilityState={{selected: intent === item.id}}
             accessibilityHint={item.brief}
-            style={[styles.segmentItem, intent === item.id && styles.segmentActive]}>
+            style={[
+              styles.segmentItem,
+              intent === item.id && styles.segmentActive,
+            ]}>
             <Text
               style={[
                 styles.segmentText,
@@ -75,7 +87,9 @@ export default function HomeScreen() {
                   {rec.category} · {projectHost(rec.project.url)}
                 </Text>
               </View>
-              <Text style={styles.score} accessibilityLabel={`Score ${rec.score}`}>
+              <Text
+                style={styles.score}
+                accessibilityLabel={`Score ${rec.score}`}>
                 {rec.score}
               </Text>
             </View>
@@ -87,14 +101,22 @@ export default function HomeScreen() {
             <View style={styles.actions}>
               <Pressable
                 accessibilityRole="link"
-                onPress={() => Linking.openURL(rec.project.url)}
+                accessibilityLabel={`Open ${rec.project.name}`}
+                onPress={() =>
+                  Linking.openURL(rec.project.url).catch(() => undefined)
+                }
                 style={styles.action}>
                 <Text style={styles.actionPrimary}>Open</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel={`Not for me: hide ${rec.project.name}`}
                 onPress={() =>
-                  setDismissed(prev => new Set(prev).add(rec.project.slug))
+                  setDismissedSlugs(prev =>
+                    prev.includes(rec.project.slug)
+                      ? prev
+                      : [...prev, rec.project.slug],
+                  )
                 }
                 style={styles.action}>
                 <Text style={styles.actionText}>Not for me</Text>
@@ -106,7 +128,7 @@ export default function HomeScreen() {
       {dismissed.size > 0 && (
         <Pressable
           accessibilityRole="button"
-          onPress={() => setDismissed(new Set())}
+          onPress={() => setDismissedSlugs([])}
           style={styles.reset}>
           <Text style={styles.actionText}>
             Restore {dismissed.size} dismissed
@@ -124,8 +146,18 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f6f7f9'},
   content: {padding: 16, paddingBottom: 48},
-  segment: {flexDirection: 'row', backgroundColor: '#e4e7ec', borderRadius: 10, padding: 3},
-  segmentItem: {flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8},
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: '#e4e7ec',
+    borderRadius: 10,
+    padding: 3,
+  },
+  segmentItem: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
   segmentActive: {backgroundColor: '#fff'},
   segmentText: {color: '#555', fontWeight: '600'},
   segmentTextActive: {color: '#3a0ca3'},
@@ -141,7 +173,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   empty: {color: '#777', textAlign: 'center', marginTop: 24},
-  card: {backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10},
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+  },
   cardHeader: {flexDirection: 'row', alignItems: 'center'},
   rank: {fontSize: 16, color: '#999', width: 34, fontWeight: '700'},
   cardTitle: {flex: 1},
